@@ -1,5 +1,5 @@
 
-package com.twopi.TweetMood;
+package com.twopi;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
