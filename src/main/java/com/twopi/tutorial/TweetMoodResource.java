@@ -1,5 +1,5 @@
 
-package com.twopi;
+package com.twopi.tutorial;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
