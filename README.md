@@ -1,1 +1,1 @@
-# Tweet Sentiment Analysis with HP Vertica and HP IDOLOnDemand - A Tutorial. 
+# Tutorial on Tweet Sentiment Analysis with HP Vertica and HP IDOLOnDemand. 
