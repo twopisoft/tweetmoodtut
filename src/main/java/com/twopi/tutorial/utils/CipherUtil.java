@@ -19,6 +19,10 @@ public class CipherUtil {
     private final static Logger logger = Logger.getLogger(CipherUtil.class
             .getName());
 
+    private CipherUtil() {
+        
+    }
+    
     /**
      * Encrypts a value. The key is read from environment.
      * 

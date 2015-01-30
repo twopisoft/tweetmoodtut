@@ -15,9 +15,12 @@ public class DBHelper {
 
     private static Connection conn = null;
 
-    private final static Logger logger = Logger.getLogger(DBHelper.class
-            .getName());
+    private final static Logger logger = Logger.getLogger(DBHelper.class.getName());
 
+    private DBHelper() {
+        
+    }
+    
     /**
      * Opens a connection to the Database. If the connection exists, then
      * returns the cached connection.

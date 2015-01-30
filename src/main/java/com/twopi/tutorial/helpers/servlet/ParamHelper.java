@@ -14,7 +14,9 @@ import com.twopi.tutorial.utils.CipherUtil;
 public class ParamHelper {
 
     private final static String KEY_SUFFIX = ".key";
-    private final static String ENC_PARAM  = "encrypt.keys";
+    private final static String ENC_PARAM  = "encrypt.keys"; // This parameter controls whether "*.key" 
+                                                             // parameters are encrypted or in plaintext.
+                                                             // 1 = Params encrypted.
 
     private ParamHelper() {
 
