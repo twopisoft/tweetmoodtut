@@ -15,8 +15,8 @@
                 <inherited>true</inherited>
                 <version>2.5.1</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -42,10 +42,16 @@
         	<artifactId>jasypt</artifactId>
         	<version>${jasypt-version}</version>
         </dependency>
+        <dependency>
+        	<groupId>vertica</groupId>
+        	<artifactId>vertica-jdbc</artifactId>
+        	<version>7.1.1-0</version>
+        </dependency>
     </dependencies>
     <properties>
         <jersey-version>1.8</jersey-version>
         <jasypt-version>1.9.2</jasypt-version>
+        <vertica-version>7.1.1-0</vertica-version>
     </properties>
     <repositories>
         <repository>

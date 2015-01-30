@@ -34,8 +34,8 @@
         <param-value>dbadmin</param-value>
     </context-param>
     <context-param>
-    	<param-name>db.password</param-name>
-        <param-value>password</param-value>
+    	<param-name>db.password.key</param-name>
+        <param-value>YtY379kP/BKwEr5xRJBWHzHkSnKc5Gdn</param-value>
     </context-param>
     <context-param>
     	<param-name>idolapi.key</param-name>
