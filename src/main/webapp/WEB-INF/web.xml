@@ -42,19 +42,19 @@
         <param-value>ifRgnxLpIvWn3JlWLdQqha23HOmdGELJqqaNgQQnzCNGb6sVwHLjRc5wYHR8k/Nn</param-value>
     </context-param>
     <context-param>
-    	<param-name>twitterapi.key</param-name>
+    	<param-name>twitteroauth.key</param-name>
         <param-value>lvls5nSLZM6yOfdJLj353LiFYmzSYAXbCI5RZIcFEPk6BPA447PXbw==</param-value>
     </context-param>
     <context-param>
-    	<param-name>twitterapi.secret.key</param-name>
+    	<param-name>twitteroauth.secret.key</param-name>
         <param-value>i/vx7sWkkq4/zKevJWofVrTPwMDTmirrHKAMqOV//uSBnC29wQf3YKCaikDJq5RZL+pun/wSqWwuZ8GdLlCyUg==</param-value>
     </context-param>
     <context-param>
-    	<param-name>twittertoken.key</param-name>
+    	<param-name>twitteroauth.token.key</param-name>
         <param-value>MXIOT3ZnegPa8I+b3QVVoPurt4OlVxUuF+++dY0idhodKH7hkc7RcawPvBJAGKvnlyYcTskiQXrj5oCaD9MonQ==</param-value>
     </context-param>
     <context-param>
-    	<param-name>twittertoken.secret.key</param-name>
+    	<param-name>twitteroauth.token.secret.key</param-name>
         <param-value>NkrzMkmjlbu4oRuL1nCD5oHqNssZbRjqIXSBt44Wcmpcw2mQKZDCmRoZEiFixfPK3+W2NX0lzuQ=</param-value>
     </context-param>
     
