@@ -39,18 +39,19 @@ public class ContextListener implements ServletContextListener {
         ctx.setAttribute(Constants.DB_CONNECTION_PARAM, dbConnection);
         
         // Initialize IDOLServiceHelper and set in as context attribute
-        logger.info("Initializing IDOLServiceHelper");
         String idolApiKey = ParamHelper.getParamValue(ctx, Constants.IDOLAPI_KEY_PARAM);
+        
+        logger.info("Initializing IDOLServiceHelper");
         IDOLServiceHelper idolServiceHelper = new IDOLServiceHelper(ParamHelper.getParamValue(ctx, idolApiKey));
         ctx.setAttribute(Constants.IDOL_SVC_PARAM, idolServiceHelper);
         
         // Initialize TwitterHelper and set in as context attribute
-        logger.info("Initializing TwitterHelper");
         String twOauthKey = ParamHelper.getParamValue(ctx, Constants.TWOAUTH_KEY_PARAM);
         String twOauthSecret = ParamHelper.getParamValue(ctx, Constants.TWOAUTH_SECRET_PARAM);
         String twOauthToken = ParamHelper.getParamValue(ctx, Constants.TWOAUTH_TOKEN_PARAM);
         String twOauthTokenSecret = ParamHelper.getParamValue(ctx, Constants.TWOAUTH_TOEKN_SECRET_PARAM);
         
+        logger.info("Initializing TwitterHelper");
         TwitterHelper twitterHelper = new TwitterHelper(twOauthKey, twOauthSecret, twOauthToken, twOauthTokenSecret);
         ctx.setAttribute(Constants.TWITTER_HELPER_PARAM, twitterHelper);
 

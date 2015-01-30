@@ -17,7 +17,7 @@ public class TwitterHelper {
     
     private final static Logger logger = Logger.getLogger(TwitterHelper.class.getName());
     
-    Twitter _twitter = null;
+    private Twitter _twitter = null;
     
     public TwitterHelper(String oauthKey, String oauthSecret, String oauthToken, String oauthTokenSecret) {
         
