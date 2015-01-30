@@ -16,8 +16,7 @@ public class CipherUtil {
 
     private static String KEY_ENV_VAR = "SECRET_KEY";
 
-    private final static Logger logger = Logger.getLogger(CipherUtil.class
-            .getName());
+    private final static Logger logger = Logger.getLogger(CipherUtil.class.getName());
 
     private CipherUtil() {
         
