@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- This web.xml file is not required when using Servlet 3.0 container, 
      see implementation details http://jersey.java.net/nonav/documentation/latest/jax-rs.html#d4e194 -->
+ 
 <web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
     <servlet>
         <servlet-name>Jersey Web Application</servlet-name>
@@ -11,6 +12,52 @@
         </init-param>
         <load-on-startup>1</load-on-startup>
     </servlet>
+    
+    <listener>
+    	<listener-class>com.twopi.tutorial.helpers.servlet.ContextListener</listener-class>
+    </listener>
+    
+    <context-param>
+    	<param-name>encrypt.keys</param-name>
+        <param-value>1</param-value>
+    </context-param>
+    <context-param>
+    	<param-name>db.driver.class</param-name>
+        <param-value>com.vertica.jdbc.Driver</param-value>
+    </context-param>
+    <context-param>
+    	<param-name>db.url</param-name>
+        <param-value>jdbc:vertica://192.168.1.9:5433/VMartDB</param-value>
+    </context-param>
+    <context-param>
+    	<param-name>db.user</param-name>
+        <param-value>dbadmin</param-value>
+    </context-param>
+    <context-param>
+    	<param-name>db.password</param-name>
+        <param-value>password</param-value>
+    </context-param>
+    <context-param>
+    	<param-name>idolapi.key</param-name>
+        <param-value>ifRgnxLpIvWn3JlWLdQqha23HOmdGELJqqaNgQQnzCNGb6sVwHLjRc5wYHR8k/Nn</param-value>
+    </context-param>
+    <context-param>
+    	<param-name>twitterapi.key</param-name>
+        <param-value>lvls5nSLZM6yOfdJLj353LiFYmzSYAXbCI5RZIcFEPk6BPA447PXbw==</param-value>
+    </context-param>
+    <context-param>
+    	<param-name>twitterapi.secret.key</param-name>
+        <param-value>i/vx7sWkkq4/zKevJWofVrTPwMDTmirrHKAMqOV//uSBnC29wQf3YKCaikDJq5RZL+pun/wSqWwuZ8GdLlCyUg==</param-value>
+    </context-param>
+    <context-param>
+    	<param-name>twittertoken.key</param-name>
+        <param-value>MXIOT3ZnegPa8I+b3QVVoPurt4OlVxUuF+++dY0idhodKH7hkc7RcawPvBJAGKvnlyYcTskiQXrj5oCaD9MonQ==</param-value>
+    </context-param>
+    <context-param>
+    	<param-name>twittertoken.secret.key</param-name>
+        <param-value>NkrzMkmjlbu4oRuL1nCD5oHqNssZbRjqIXSBt44Wcmpcw2mQKZDCmRoZEiFixfPK3+W2NX0lzuQ=</param-value>
+    </context-param>
+    
     <servlet-mapping>
         <servlet-name>Jersey Web Application</servlet-name>
         <url-pattern>/ws/*</url-pattern>
