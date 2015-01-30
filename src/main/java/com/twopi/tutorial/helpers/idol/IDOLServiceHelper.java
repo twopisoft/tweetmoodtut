@@ -10,7 +10,7 @@ import java.util.logging.Logger;
  */
 public class IDOLServiceHelper {
     
-    private final static Logger logger = Logger.getLogger(IDOLServiceHelper.class.getName());
+    private final static Logger LOG = Logger.getLogger(IDOLServiceHelper.class.getName());
     
     private String _apiKey = null;
 

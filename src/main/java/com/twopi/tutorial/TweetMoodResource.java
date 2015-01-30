@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 @Path("/")
 public class TweetMoodResource {
 	
-	private final static Logger logger = Logger.getLogger(TweetMoodResource.class.getName());
+	private final static Logger LOG = Logger.getLogger(TweetMoodResource.class.getName());
     
     /** Method processing HTTP GET requests, producing "text/plain" MIME media
      * type.

@@ -20,11 +20,11 @@ import com.twopi.tutorial.utils.Constants;
  */
 public class ContextListener implements ServletContextListener {
 
-    private final static Logger logger = Logger.getLogger(ContextListener.class.getName());
+    private final static Logger LOG = Logger.getLogger(ContextListener.class.getName());
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-        logger.info("contextInitialized");
+        LOG.info("contextInitialized");
 
         ServletContext ctx = sce.getServletContext();
 
@@ -34,14 +34,14 @@ public class ContextListener implements ServletContextListener {
         String dbUser = ParamHelper.getParamValue(ctx, Constants.DB_USER_PARAM);
         String dbPwd = ParamHelper.getParamValue(ctx, Constants.DB_PWD_PARAM);
 
-        logger.info("Opening DB Connection");
+        LOG.info("Opening DB Connection");
         Connection dbConnection = DBHelper.openConnection(dbClass, dbUrl,dbUser, dbPwd);
         ctx.setAttribute(Constants.DB_CONNECTION_PARAM, dbConnection);
         
         // Initialize IDOLServiceHelper and set in as context attribute
         String idolApiKey = ParamHelper.getParamValue(ctx, Constants.IDOLAPI_KEY_PARAM);
         
-        logger.info("Initializing IDOLServiceHelper");
+        LOG.info("Initializing IDOLServiceHelper");
         IDOLServiceHelper idolServiceHelper = new IDOLServiceHelper(ParamHelper.getParamValue(ctx, idolApiKey));
         ctx.setAttribute(Constants.IDOL_SVC_PARAM, idolServiceHelper);
         
@@ -51,7 +51,7 @@ public class ContextListener implements ServletContextListener {
         String twOauthToken = ParamHelper.getParamValue(ctx, Constants.TWOAUTH_TOKEN_PARAM);
         String twOauthTokenSecret = ParamHelper.getParamValue(ctx, Constants.TWOAUTH_TOEKN_SECRET_PARAM);
         
-        logger.info("Initializing TwitterHelper");
+        LOG.info("Initializing TwitterHelper");
         TwitterHelper twitterHelper = new TwitterHelper(twOauthKey, twOauthSecret, twOauthToken, twOauthTokenSecret);
         ctx.setAttribute(Constants.TWITTER_HELPER_PARAM, twitterHelper);
 
@@ -59,9 +59,9 @@ public class ContextListener implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        logger.info("contextDestroyed");
+        LOG.info("contextDestroyed");
 
-        logger.info("Closing DB Connection");
+        LOG.info("Closing DB Connection");
         DBHelper.closeConnection();
     }
 

@@ -15,7 +15,7 @@ import twitter4j.conf.ConfigurationBuilder;
  */
 public class TwitterHelper {
     
-    private final static Logger logger = Logger.getLogger(TwitterHelper.class.getName());
+    private final static Logger LOG = Logger.getLogger(TwitterHelper.class.getName());
     
     private Twitter _twitter = null;
     
