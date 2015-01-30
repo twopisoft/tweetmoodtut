@@ -16,7 +16,7 @@ public class CipherUtil {
 
     private static String KEY_ENV_VAR = "SECRET_KEY";
 
-    private final static Logger logger = Logger.getLogger(CipherUtil.class.getName());
+    private final static Logger LOG = Logger.getLogger(CipherUtil.class.getName());
 
     private CipherUtil() {
         
@@ -52,7 +52,7 @@ public class CipherUtil {
         String key = env.get(KEY_ENV_VAR);
 
         if (key == null) {
-            logger.warning("\"" + KEY_ENV_VAR + "\" is not set!!");
+            LOG.warning("\"" + KEY_ENV_VAR + "\" is not set!!");
             return "";
         }
         return key;
