@@ -1,4 +1,4 @@
-package com.twopi.tutorial.helpers.servlet;
+package com.twopi.tutorial.servlet;
 
 import javax.servlet.ServletContext;
 

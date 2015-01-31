@@ -1,4 +1,4 @@
-package com.twopi.tutorial.helpers.db;
+package com.twopi.tutorial.db;
 
 import java.util.logging.Logger;
 import java.sql.Connection;
@@ -13,13 +13,9 @@ import java.sql.SQLException;
  */
 public class DBHelper {
 
-    private static Connection conn = null;
+    private Connection conn = null;
 
-    private final static Logger logger = Logger.getLogger(DBHelper.class.getName());
-
-    private DBHelper() {
-        
-    }
+    private final static Logger LOG = Logger.getLogger(DBHelper.class.getName());
     
     /**
      * Opens a connection to the Database. If the connection exists, then
@@ -31,19 +27,19 @@ public class DBHelper {
      * @param dbPwd - DB password
      * @return - DB Connection
      */
-    public static Connection openConnection(String dbClass, String dbUrl,
+    public Connection openConnection(String dbClass, String dbUrl,
             String dbUser, String dbPwd) {
 
         if (conn == null) {
             try {
                 Class.forName(dbClass);
                 conn = DriverManager.getConnection(dbUrl, dbUser, dbPwd);
-                logger.info("DB Connection opened");
+                LOG.info("DB Connection opened");
             } catch (ClassNotFoundException cnfe) {
-                logger.severe("Exception while opening DB connection: "
+                LOG.severe("Exception while opening DB connection: "
                         + cnfe.toString());
             } catch (SQLException sqe) {
-                logger.severe("Exception while opening DB connection: "
+                LOG.severe("Exception while opening DB connection: "
                         + sqe.toString());
             }
         }
@@ -55,13 +51,13 @@ public class DBHelper {
      * Closes DB Connection. Even though the connection can be closed directly,
      * its better to call this method to close and cleanup the connection.
      */
-    public static void closeConnection() {
+    public void closeConnection() {
         if (conn != null) {
             try {
                 conn.close();
-                logger.info("DB Connection closed");
+                LOG.info("DB Connection closed");
             } catch (SQLException sqe) {
-                logger.warning("Failed to close DB connection: "
+                LOG.warning("Failed to close DB connection: "
                         + sqe.toString());
             } finally {
                 conn = null;

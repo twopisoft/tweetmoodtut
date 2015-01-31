@@ -1,4 +1,4 @@
-package com.twopi.tutorial.helpers.twitter;
+package com.twopi.tutorial.twitter;
 
 import java.util.logging.Logger;
 

@@ -1,4 +1,4 @@
-package com.twopi.tutorial.helpers.servlet;
+package com.twopi.tutorial.servlet;
 
 import java.sql.Connection;
 import java.util.logging.Logger;
@@ -7,9 +7,9 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
-import com.twopi.tutorial.helpers.db.DBHelper;
-import com.twopi.tutorial.helpers.idol.IDOLServiceHelper;
-import com.twopi.tutorial.helpers.twitter.TwitterHelper;
+import com.twopi.tutorial.db.DBHelper;
+import com.twopi.tutorial.idol.IDOLServiceHelper;
+import com.twopi.tutorial.twitter.TwitterHelper;
 import com.twopi.tutorial.utils.Constants;
 
 /**
@@ -35,8 +35,9 @@ public class ContextListener implements ServletContextListener {
         String dbPwd = ParamHelper.getParamValue(ctx, Constants.DB_PWD_PARAM);
 
         LOG.info("Opening DB Connection");
-        Connection dbConnection = DBHelper.openConnection(dbClass, dbUrl,dbUser, dbPwd);
-        ctx.setAttribute(Constants.DB_CONNECTION_PARAM, dbConnection);
+        DBHelper dbHelper = new DBHelper();
+        dbHelper.openConnection(dbClass, dbUrl,dbUser, dbPwd);
+        ctx.setAttribute(Constants.DB_HELPER_PARAM, dbHelper);
         
         // Initialize IDOLServiceHelper and set in as context attribute
         String idolApiKey = ParamHelper.getParamValue(ctx, Constants.IDOLAPI_KEY_PARAM);
@@ -61,8 +62,11 @@ public class ContextListener implements ServletContextListener {
     public void contextDestroyed(ServletContextEvent sce) {
         LOG.info("contextDestroyed");
 
+        ServletContext ctx = sce.getServletContext();
+        
         LOG.info("Closing DB Connection");
-        DBHelper.closeConnection();
+        DBHelper dbHelper = (DBHelper) ctx.getAttribute(Constants.DB_HELPER_PARAM);
+        dbHelper.closeConnection();
     }
 
 }

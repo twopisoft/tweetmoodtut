@@ -1,4 +1,4 @@
-package com.twopi.tutorial.helpers.idol;
+package com.twopi.tutorial.idol;
 
 import java.util.logging.Logger;
 
