@@ -14,7 +14,7 @@
     </servlet>
     
     <listener>
-    	<listener-class>com.twopi.tutorial.helpers.servlet.ContextListener</listener-class>
+    	<listener-class>com.twopi.tutorial.servlet.ContextListener</listener-class>
     </listener>
     
     <context-param>
