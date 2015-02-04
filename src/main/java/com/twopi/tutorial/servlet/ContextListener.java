@@ -1,6 +1,5 @@
 package com.twopi.tutorial.servlet;
 
-import java.sql.Connection;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletContext;
@@ -37,14 +36,14 @@ public class ContextListener implements ServletContextListener {
         LOG.info("Opening DB Connection");
         DBHelper dbHelper = new DBHelper();
         dbHelper.openConnection(dbClass, dbUrl,dbUser, dbPwd);
-        ctx.setAttribute(Constants.DB_HELPER_PARAM, dbHelper);
+        ctx.setAttribute(Constants.DB_HELPER_ATTR, dbHelper);
         
         // Initialize IDOLServiceHelper and set in as context attribute
         String idolApiKey = ParamHelper.getParamValue(ctx, Constants.IDOLAPI_KEY_PARAM);
         
         LOG.info("Initializing IDOLServiceHelper");
         IDOLServiceHelper idolServiceHelper = new IDOLServiceHelper(ParamHelper.getParamValue(ctx, idolApiKey));
-        ctx.setAttribute(Constants.IDOL_SVC_PARAM, idolServiceHelper);
+        ctx.setAttribute(Constants.IDOL_SVC_ATTR, idolServiceHelper);
         
         // Initialize TwitterHelper and set in as context attribute
         String twOauthKey = ParamHelper.getParamValue(ctx, Constants.TWOAUTH_KEY_PARAM);
@@ -54,7 +53,7 @@ public class ContextListener implements ServletContextListener {
         
         LOG.info("Initializing TwitterHelper");
         TwitterHelper twitterHelper = new TwitterHelper(twOauthKey, twOauthSecret, twOauthToken, twOauthTokenSecret);
-        ctx.setAttribute(Constants.TWITTER_HELPER_PARAM, twitterHelper);
+        ctx.setAttribute(Constants.TWITTER_HELPER_ATTR, twitterHelper);
 
     }
 
@@ -65,8 +64,10 @@ public class ContextListener implements ServletContextListener {
         ServletContext ctx = sce.getServletContext();
         
         LOG.info("Closing DB Connection");
-        DBHelper dbHelper = (DBHelper) ctx.getAttribute(Constants.DB_HELPER_PARAM);
-        dbHelper.closeConnection();
+        DBHelper dbHelper = (DBHelper) ctx.getAttribute(Constants.DB_HELPER_ATTR);
+        if (dbHelper != null) {
+            dbHelper.closeConnection();
+        }
     }
 
 }

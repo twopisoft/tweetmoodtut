@@ -10,6 +10,12 @@
             <param-name>com.sun.jersey.config.property.packages</param-name>
             <param-value>com.twopi.tutorial</param-value>
         </init-param>
+        
+        <init-param>
+            <param-name>com.sun.jersey.api.json.POJOMappingFeature</param-name>
+            <param-value>true</param-value>
+        </init-param>
+        
         <load-on-startup>1</load-on-startup>
     </servlet>
     
@@ -27,7 +33,7 @@
     </context-param>
     <context-param>
     	<param-name>db.url</param-name>
-        <param-value>jdbc:vertica://192.168.1.9:5433/VMartDB</param-value>
+        <param-value>jdbc:vertica://192.168.1.7:5433/TweetMoodDB</param-value>
     </context-param>
     <context-param>
     	<param-name>db.user</param-name>

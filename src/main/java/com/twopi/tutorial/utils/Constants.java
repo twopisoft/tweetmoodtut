@@ -16,13 +16,13 @@ public final class Constants {
 
     // Other constants related to DB
     public final static String DB_CONNECTION_PARAM      = "db.connection";
-    public final static String DB_HELPER_PARAM          = "db.helper";
+    public final static String DB_HELPER_ATTR           = "db.helper";
 
     // Parameter names for IDOL API
     public final static String IDOLAPI_KEY_PARAM        = "idolapi.key";
     
     // Other constants related to IDOL Service
-    public final static String IDOL_SVC_PARAM           = "idol.service.helper";
+    public final static String IDOL_SVC_ATTR            = "idol.service.helper";
 
     // Parameter names for Twitter
     public final static String TWOAUTH_KEY_PARAM          = "twitteroauth.key";
@@ -31,6 +31,7 @@ public final class Constants {
     public final static String TWOAUTH_TOEKN_SECRET_PARAM = "twitteroauth.token.secret.key";
     
  // Other constants related to Twitter Helper
-    public final static String TWITTER_HELPER_PARAM       = "twitter.helper";
+    public final static String TWITTER_HELPER_ATTR        = "twitter.helper";
+    public final static int    TWITTER_BATCH_MAX          = 1000;
 
 }
