@@ -232,7 +232,7 @@ public class DBHelper {
         
         String updateStatQueryFmt = "UPDATE tweetmood.requests " +
                                     "  SET request_status = '%s', request_status_message = '%s', " +
-                                       (isCompleted ? "request_last_completion = '%s'::timestamp" : "'%s'") +
+                                       "request_last_completion = " + (isCompleted ? "'%s'::timestamp" : "%s") +
                                     "  WHERE request_id = %d";
         
         Timestamp completionTime = new Timestamp(new Date().getTime());
@@ -240,7 +240,7 @@ public class DBHelper {
         String updateStateQuery = String.format(updateStatQueryFmt, 
                                                 status, 
                                                 statusMessage.substring(0, Math.min(statusMessage.length(),100)),
-                                                (isCompleted ? completionTime.toString() : ""),
+                                                (isCompleted ? completionTime.toString() : "NULL"),
                                                 reqId);
         
         LOG.info("updateStateQuery="+updateStateQuery);

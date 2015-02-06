@@ -92,6 +92,7 @@ public class IDOLServiceHelper {
             IDOLErrorResponse errorResponse = builder.get(IDOLErrorResponse.class);
             String errMsg = String.format("Error while executing sentiment analysis api: code=%d, reason=%s, message=%s",
                                     errorResponse.getError(),errorResponse.getReason(),errorResponse.getMessage());
+            LOG.severe(errMsg);
             throw new RuntimeException(errMsg);
         }
         

@@ -61,13 +61,19 @@ public class TweetMoodResource {
             
             TweetRequest parentReq = dbHelper.getTweetRequest(request.getParentId());
             
-            if (request.getParentId() == 0 || 
-                parentReq == null ||
-                parentReq.getStatus().equals(Constants.TR_FAILED_STATUS)) {
+            long reqId = request.getRequestId();
+            boolean needProcessing = request.getParentId() == 0;
+            
+            if (parentReq != null && parentReq.getStatus().equals(Constants.TR_FAILED_STATUS)) {
+                reqId = parentReq.getRequestId();
+                needProcessing = true;
+            }
+            
+            if (needProcessing) {
                 
                 //Either fire off a new sentiment analysis request or
                 //restart a failed one
-                processRequest(normalizedSearch, request.getRequestId());
+                processRequest(normalizedSearch, reqId);
                 
                 LOG.info("Sentiment Analysis started for query=\""+search+"\"");
             } 
@@ -173,7 +179,7 @@ public class TweetMoodResource {
         // Handle any errors
         .handle((tweets, exc) -> {
             if (exc != null) {
-                updateStatus(reqId, Constants.TR_FAILED_STATUS, exc.toString());
+                updateStatus(reqId, Constants.TR_FAILED_STATUS, exc.getMessage());
                 exc.printStackTrace();
             }
             return tweets;
@@ -185,7 +191,7 @@ public class TweetMoodResource {
         // Handle any errors
         .handle((tweets, exc) -> {
             if (exc != null) {
-                updateStatus(reqId, Constants.TR_FAILED_STATUS, exc.toString());
+                updateStatus(reqId, Constants.TR_FAILED_STATUS, exc.getMessage());
                 exc.printStackTrace();
             }
             return tweets;
@@ -197,7 +203,7 @@ public class TweetMoodResource {
                 dbHelper.addTweets(reqId, tweets);
                 updateStatus(reqId, Constants.TR_COMPLETED_STATUS, "ok");
             } catch (Throwable th) {
-                updateStatus(reqId, Constants.TR_FAILED_STATUS, th.toString());
+                updateStatus(reqId, Constants.TR_FAILED_STATUS, th.getMessage());
                 
                 th.printStackTrace();
                 throw new RuntimeException(th.toString());
