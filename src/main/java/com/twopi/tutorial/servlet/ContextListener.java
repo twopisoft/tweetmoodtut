@@ -42,7 +42,7 @@ public class ContextListener implements ServletContextListener {
         String idolApiKey = ParamHelper.getParamValue(ctx, Constants.IDOLAPI_KEY_PARAM);
         
         LOG.info("Initializing IDOLServiceHelper");
-        IDOLServiceHelper idolServiceHelper = new IDOLServiceHelper(ParamHelper.getParamValue(ctx, idolApiKey));
+        IDOLServiceHelper idolServiceHelper = new IDOLServiceHelper(idolApiKey);
         ctx.setAttribute(Constants.IDOL_SVC_ATTR, idolServiceHelper);
         
         // Initialize TwitterHelper and set in as context attribute

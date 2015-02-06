@@ -12,6 +12,7 @@ import javax.ws.rs.core.Context;
 import com.twopi.tutorial.db.DBHelper;
 import com.twopi.tutorial.db.TweetRequest;
 import com.twopi.tutorial.idol.IDOLServiceHelper;
+import com.twopi.tutorial.servlet.TweetMoodErrorResponse;
 import com.twopi.tutorial.servlet.TweetMoodPendingResponse;
 import com.twopi.tutorial.servlet.TweetMoodResponse;
 import com.twopi.tutorial.twitter.TwitterHelper;
@@ -19,8 +20,14 @@ import com.twopi.tutorial.utils.AssertUtil;
 import com.twopi.tutorial.utils.Constants;
 
 import java.sql.SQLException;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
+/**
+ * JAX-RS resource class for the sentiment analysis web serivice
+ * @author arshad01
+ *
+ */
 @Path("/")
 public class TweetMoodResource {
 	
@@ -41,6 +48,114 @@ public class TweetMoodResource {
         
         AssertUtil.assertParam(search);
         
+        DBHelper dbHelper = (DBHelper) context.getAttribute(Constants.DB_HELPER_ATTR);
+        AssertUtil.assertField(dbHelper);
+        
+        TweetRequest request;
+        try {
+            String normalizedSearch = normalize(search);
+            
+            request = dbHelper.addRequest(normalizedSearch);
+            
+            AssertUtil.assertField(request);
+            
+            TweetRequest parentReq = dbHelper.getTweetRequest(request.getParentId());
+            
+            if (request.getParentId() == 0 || 
+                parentReq == null ||
+                parentReq.getStatus().equals(Constants.TR_FAILED_STATUS)) {
+                
+                //Either fire off a new sentiment analysis request or
+                //restart a failed one
+                processRequest(normalizedSearch, request.getRequestId());
+                
+                LOG.info("Sentiment Analysis started for query=\""+search+"\"");
+            } 
+        } catch (Throwable e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.toString());
+        }
+        
+        return request;
+    }
+
+    /**
+     * Polls for the result of a request.
+     * @param reqid - The request Id of the pending request
+     * @return TweetMoodResponse - 
+     *      If request is pending then return TweetMoodPendingResponse,
+     *      else if it failed then return TweetMoodErrorResponse
+     *      else return the analyzed tweets
+     *      
+     * Note: Failed requests can always be restarted by sending the same search query again.
+     */
+    @GET
+    @Produces("application/json")
+    @Path("getmoodpoll/{reqid}")
+    public TweetMoodResponse getMoodPoll(@PathParam("reqid") String reqid) {
+        LOG.info("reqId="+reqid);
+        
+        AssertUtil.assertParam(reqid);
+        
+        long requestId = Long.parseLong(reqid);
+        
+        return moodAnalysisResponse(requestId);
+    }
+    
+    /**
+     * Helper method to check for a request's result.
+     * @param reqId
+     * @return - TweetMoodResponse
+     */
+    private TweetMoodResponse moodAnalysisResponse(long reqId) {
+        
+        DBHelper dbHelper = (DBHelper) context.getAttribute(Constants.DB_HELPER_ATTR);
+        AssertUtil.assertField(dbHelper);
+        
+        TweetMoodResponse response;
+        try {
+            TweetRequest request = dbHelper.getTweetRequest(reqId);
+            
+            if (request == null) {
+                response =  new TweetMoodErrorResponse(reqId, "Invalid Request Id");
+            } else {
+                long parentId = request.getParentId();
+                
+                // Is this a top level request? Adjust the parentRequest accordingly
+                TweetRequest parentRequest =  parentId !=0 ?
+                                                dbHelper.getTweetRequest(parentId) :
+                                                request;
+                
+                if (parentRequest.getStatus().equals(Constants.TR_PENDING_STATUS)) {
+                    // For ongoing request, return a Pending response
+                    response = new TweetMoodPendingResponse(reqId);
+                } else if (parentRequest.getStatus().equals(Constants.TR_FAILED_STATUS)) {
+                    // For a failed request, retunr an Error response. Failed requests can always be restarted.
+                    response = new TweetMoodErrorResponse(reqId, parentRequest.getStatusMessage());
+                    updateStatus(reqId, Constants.TR_FAILED_STATUS, parentRequest.getStatusMessage());
+                } else {
+                    // For completed requests, return the analyzed tweets
+                    response = dbHelper.getTweets(parentRequest.getRequestId());
+                    if (parentId != 0 && !request.getStatus().equals(Constants.TR_COMPLETED_STATUS)) {
+                        updateStatus(reqId, Constants.TR_COMPLETED_STATUS, parentRequest.getStatusMessage());
+                    }
+                }
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.toString());
+        }
+        
+        return response;
+    }
+
+    /**
+     * Process request in a CompletableFuture chain.
+     * @param normalizedSearch
+     * @param reqId
+     */
+    private void processRequest(String normalizedSearch, long reqId) {
+        
         TwitterHelper twitterHelper = (TwitterHelper) context.getAttribute(Constants.TWITTER_HELPER_ATTR);
         AssertUtil.assertField(twitterHelper);
         
@@ -50,33 +165,65 @@ public class TweetMoodResource {
         DBHelper dbHelper = (DBHelper) context.getAttribute(Constants.DB_HELPER_ATTR);
         AssertUtil.assertField(dbHelper);
         
-        TweetRequest request;
-        try {
-            request = dbHelper.addRequest(normalize(search));
-            
-            AssertUtil.assertField(request);
-            
-            if (request.getRequestId() == request.getParentId()) {
-                //fire off the sentiment analysis chain
-            }
-        } catch (SQLException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            throw new RuntimeException(e.toString());
-        }
+        // Process Request Chain
         
-        return request;
+        // First obtain the tweets from Twitter
+        CompletableFuture.supplyAsync(() -> twitterHelper.searchTweets(normalizedSearch))
+        
+        // Handle any errors
+        .handle((tweets, exc) -> {
+            if (exc != null) {
+                updateStatus(reqId, Constants.TR_FAILED_STATUS, exc.toString());
+                exc.printStackTrace();
+            }
+            return tweets;
+        })
+        
+        // Then do sentiment analysis using IDOLOnDemand Sentiment Analysis API
+        .thenApply((tweets) -> idolHelper.doSentimentAnalysis(tweets))
+        
+        // Handle any errors
+        .handle((tweets, exc) -> {
+            if (exc != null) {
+                updateStatus(reqId, Constants.TR_FAILED_STATUS, exc.toString());
+                exc.printStackTrace();
+            }
+            return tweets;
+        })
+        
+        // Accept the analyzed data and store into the DB
+        .thenAccept((tweets) -> {
+            try {
+                dbHelper.addTweets(reqId, tweets);
+                updateStatus(reqId, Constants.TR_COMPLETED_STATUS, "ok");
+            } catch (Throwable th) {
+                updateStatus(reqId, Constants.TR_FAILED_STATUS, th.toString());
+                
+                th.printStackTrace();
+                throw new RuntimeException(th.toString());
+            } 
+        }); 
     }
     
-    @GET
-    @Produces("application/json")
-    @Path("getmoodpoll/{reqid}")
-    public TweetMoodResponse getMoodPoll(@PathParam("reqid") String reqid) {
-        LOG.info("reqId="+reqid);
+    /**
+     * Updates the status of a request. Done here so as to properly handle SQLException thrown by
+     * DBHelper method
+     * @param reqId
+     * @param status
+     * @param statusMessage
+     */
+    private void updateStatus(long reqId, String status, String statusMessage) {
         
-        AssertUtil.assertParam(reqid);
+        DBHelper dbHelper = (DBHelper) context.getAttribute(Constants.DB_HELPER_ATTR);
         
-        return new TweetMoodPendingResponse();
+        AssertUtil.assertField(dbHelper);
+        
+        try {
+            dbHelper.updateStatus(reqId, status, statusMessage);
+        } catch (SQLException sqe) {
+            sqe.printStackTrace();
+            LOG.warning("Failed to update the status of reqId="+reqId);
+        }
     }
     
     /**

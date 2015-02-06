@@ -1,6 +1,8 @@
 package com.twopi.tutorial.db;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import java.sql.Connection;
@@ -10,8 +12,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 
+import com.twopi.tutorial.servlet.TweetMoodResponse;
+import com.twopi.tutorial.utils.AssertUtil;
+import com.twopi.tutorial.utils.Constants;
+
 /**
- * Class providing methods to interact with the database.
+ * Class providing methods to interact with the database. 
+ * 
+ * Note: that all query strings are stored in this class rather
+ * than the Constants or any other class so as to keep them close to their usage.
  * 
  * @author arshad01
  *
@@ -22,8 +31,8 @@ public class DBHelper {
 
     private final static Logger LOG = Logger.getLogger(DBHelper.class.getName());
     
-    // AtomicLong to generate requests ids. 
-    private AtomicLong _nextRequestId = new AtomicLong(1000000);
+    // AtomicLong to generate requests ids.
+    private static AtomicLong _nextRequestId = new AtomicLong();
     
     /**
      * Opens a connection to the Database. If the connection exists, then
@@ -42,11 +51,10 @@ public class DBHelper {
             try {
                 Class.forName(dbClass);
                 _conn = DriverManager.getConnection(dbUrl, dbUser, dbPwd);
-                _conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-                //_conn.setAutoCommit(false);
                 
                 LOG.info("DB Connection opened");
-                LOG.info("Transcation isolation level: "+_conn.getTransactionIsolation());
+                
+                initNextRequestId();
             } catch (ClassNotFoundException cnfe) {
                 LOG.severe("Exception while opening DB connection: "
                         + cnfe.toString());
@@ -58,11 +66,12 @@ public class DBHelper {
 
         return _conn;
     }
-    
+
     /**
      * Adds a sentiment analysis request into the tweetmood.requests table
      * @param queryStr - Normalized query string
      * @return TweetRequest object containing request id which can be used for polling for results.
+     * @throws SQLException
      */
     public TweetRequest addRequest(String queryStr) throws SQLException {
         assertState();
@@ -71,6 +80,65 @@ public class DBHelper {
        
        return tweetRequest;
     }
+    
+    /**
+     * Inserts tweets for a given request. Once the tweets are added, the request status is updated to "completed"
+     * @param reqId
+     * @param tweets
+     * @throws SQLException
+     */
+    public void addTweets(long reqId, List<Tweet> tweets) throws SQLException {
+        assertState();
+        
+        LOG.info("Adding tweets for request_id="+reqId);
+        
+        for (Tweet tw : tweets) {
+            insertTweet(reqId, tw);
+        }
+        
+        LOG.info(tweets.size() + " tweets inserted");
+    }
+    
+    /**
+     * Checks if a request is in pending state.
+     * @param reqId
+     * @return true if request is in pending state
+     * @throws SQLException
+     */
+    public boolean isRequestPending(long reqId) throws SQLException {
+        assertState();
+        
+        TweetRequest tweetRequest = getTweetRequest(reqId);
+        
+        AssertUtil.assertField(tweetRequest);
+        
+        return tweetRequest.getStatus().equals(Constants.TR_PENDING_STATUS);
+    }
+
+    /**
+     * Returns tweets for a given request.
+     * @param reqId
+     * @return Tweets for a given request id.
+     * @throws SQLException
+     */
+    public TweetMoodResponse getTweets(long reqId) throws SQLException {
+        assertState();
+        
+        String tweetQuery = "SELECT * FROM tweetmood.tweets WHERE tweet_request_id = " + reqId;
+        
+        Statement tweetStmt = _conn.createStatement();
+        
+        ResultSet rs = tweetStmt.executeQuery(tweetQuery);
+        
+        List<Tweet> tweets = new ArrayList<Tweet>();
+        while (rs.next()) {
+            tweets.add(new Tweet().load(rs));
+        }
+        
+        LOG.info("Returning "+tweets.size()+" tweets");
+        
+        return new TweetMoodResponse(reqId, tweets);
+    }
 
     /**
      * Inserts a new request into the tweetmood.requests table. The query uses insert with select to add a row and
@@ -78,16 +146,16 @@ public class DBHelper {
      * then a row with parent id=0 is inserted. For example, if the query string is '$hpq $aapl', then the first call
      * to this method updates the table as follows:
      * 
-     * request_id  |   request_created_at    | request_query | request_parent_id | request_status 
-     * ------------+-------------------------+---------------+-------------------+----------------
-     *     1000000 | 2015-02-04 21:42:34.861 | $hpq $aapl    |                 0 | pending
+     *  request_id |   request_created_at    | request_last_completion | request_query | request_parent_id | request_status | request_status_message 
+     * ------------+-------------------------+-------------------------+---------------+-------------------+----------------+------------------------
+     *     1000000 | 2015-02-05 09:41:14.552 |                         | $hpq $aapl    |                 0 | pending        |
      * 
      * A second call with same query string will result in following update:
      * 
-     * request_id  |   request_created_at    | request_query | request_parent_id | request_status 
-     * ------------+-------------------------+---------------+-------------------+----------------
-     *     1000000 | 2015-02-04 21:42:34.861 | $hpq $aapl    |                 0 | pending
-     *     1000001 | 2015-02-04 21:42:54.587 | $hpq $aapl    |           1000000 | pending
+     *  request_id |   request_created_at    | request_last_completion | request_query | request_parent_id | request_status | request_status_message 
+     * ------------+-------------------------+-------------------------+---------------+-------------------+----------------+------------------------
+     *     1000000 | 2015-02-05 09:41:14.552 |                         | $hpq $aapl    |                 0 | pending        | 
+     *     1000001 | 2015-02-05 09:42:58.046 |                         | $hpq $aapl    |           1000000 | pending        | 
      *     
      * Note that in the second row, the parent id points to the first row.
      *     
@@ -102,13 +170,13 @@ public class DBHelper {
         long newReqId = _nextRequestId.getAndIncrement();
         
         String insertReqQuery = String.format(
-                                    "INSERT INTO tweetmood.requests (request_id, request_created_at,request_query,request_parent_id,request_status) "+
-                                            "SELECT %d, '%s'::timestamp, request_query, request_id, 'pending' FROM tweetmood.requests " +
+                                    "INSERT INTO tweetmood.requests (request_id, request_created_at,request_query,request_parent_id,request_status,request_status_message) "+
+                                            "SELECT %d, '%s'::timestamp, request_query, request_id, 'pending', 'in progress...' FROM tweetmood.requests " +
                                             "WHERE request_query = '%s' AND request_parent_id = 0 "+
                                             "UNION "+
-                                            "SELECT * FROM (SELECT %d, '%s'::timestamp, '%s', 0, 'pending') AS tmp "+
+                                            "SELECT * FROM (SELECT %d, '%s'::timestamp, '%s', 0, 'pending', 'in progress...') AS tmp "+
                                             "WHERE NOT EXISTS "+
-                                            " (SELECT '%s'::timestamp, request_query, request_id, 'pending' FROM tweetmood.requests "+
+                                            " (SELECT '%s'::timestamp, request_query, request_id, 'pending', 'in progress...' FROM tweetmood.requests "+
                                             "  WHERE request_query = '%s' AND request_parent_id = 0)",
                                     newReqId,
                                     creationTimeStr,
@@ -136,35 +204,86 @@ public class DBHelper {
      * @return TweetRequest object or NULL if none was found.
      * @throws SQLException
      */
-    private TweetRequest getTweetRequest(long reqId) throws SQLException {
+    public TweetRequest getTweetRequest(long reqId) throws SQLException {
+        assertState();
         
         String findQuery = String.format("SELECT * FROM tweetmood.requests WHERE request_id = %d",reqId);
         
         Statement findStmt = _conn.createStatement();
         ResultSet rs = findStmt.executeQuery(findQuery);
         if (rs.next()) {
-            return mapTweetRequest(rs);
+            return new TweetRequest().load(rs);
         }
                         
         return null;
     }
-
+    
     /**
-     * Creates a TweetRequest object given the current ResultSet cursor.
-     * @param rs - ResultSet cursor
-     * @return - TweetRequest object populated with fields extracted from the ResultSet cursor.
+     * Updates a request's status
+     * @param reqId
+     * @param status
+     * @param statusMessage
      * @throws SQLException
      */
-    private TweetRequest mapTweetRequest(ResultSet rs) throws SQLException {
-        TweetRequest tweetRequest = new TweetRequest();
+    public void updateStatus(long reqId, String status, String statusMessage) throws SQLException {
+        assertState();
         
-        tweetRequest.setRequestId(rs.getLong("request_id"));
-        tweetRequest.setCreatedAt(rs.getTimestamp("request_created_at"));
-        tweetRequest.setQuery(rs.getString("request_query"));
-        tweetRequest.setParentId(rs.getLong("request_parent_id"));
-        tweetRequest.setStatus(rs.getString("request_status"));
+        boolean isCompleted = status.equals(Constants.TR_COMPLETED_STATUS);
         
-        return tweetRequest;
+        String updateStatQueryFmt = "UPDATE tweetmood.requests " +
+                                    "  SET request_status = '%s', request_status_message = '%s', " +
+                                       (isCompleted ? "request_last_completion = '%s'::timestamp" : "'%s'") +
+                                    "  WHERE request_id = %d";
+        
+        Timestamp completionTime = new Timestamp(new Date().getTime());
+        
+        String updateStateQuery = String.format(updateStatQueryFmt, 
+                                                status, 
+                                                statusMessage.substring(0, Math.min(statusMessage.length(),100)),
+                                                (isCompleted ? completionTime.toString() : ""),
+                                                reqId);
+        
+        LOG.info("updateStateQuery="+updateStateQuery);
+        
+        Statement updateStatStmt = _conn.createStatement();
+        
+        updateStatStmt.executeUpdate(updateStateQuery);
+        
+        LOG.info("Setting \""+status+"\" status for request_id: "+reqId);
+    }
+    
+    /**
+     * Helper method to insert a Tweet entity
+     * @param reqId
+     * @param tw
+     * @throws SQLException
+     */
+    private void insertTweet(long reqId, Tweet tw) throws SQLException {
+        
+        String insertTwQuery = String.format(
+                                    "INSERT INTO tweetmood.tweets " +
+                                    "  (tweet_request_id, tweet_twitter_id, tweet_topic, tweet_date_created,"+
+                                    "   tweet_language,tweet_text,tweet_clean_text,tweet_user_id,tweet_user_name," +
+                                    "   tweet_retweeted,tweet_favorited,tweet_mood,tweet_mood_score) " +
+                                    " VALUES (%d, %d, '%s', '%s'::timestamp, '%s', '%s', '%s', %d, '%s', " +
+                                    "        '%b','%b','%s',%f)",
+                                    reqId,
+                                    tw.getTweetTwitterId(),
+                                    tw.getTopic(),
+                                    tw.getDateCreated().toString(),
+                                    tw.getLanguage(),
+                                    tw.getText().replaceAll("'", "''"),
+                                    tw.getCleanText().replaceAll("'", "''"),
+                                    tw.getUserId(),
+                                    tw.getUserName(),
+                                    tw.isRetweeted(),
+                                    tw.isFavorited(),
+                                    tw.getTweetMood(),
+                                    tw.getMoodScore());
+        
+        Statement insertTwStmt = _conn.createStatement();
+        
+        insertTwStmt.executeUpdate(insertTwQuery);
     }
 
     /**
@@ -195,4 +314,28 @@ public class DBHelper {
         }
         return true;
     }
+    
+    /**
+     * Initializes the _nextRequestId field on startup by reading the last value of the request_id. Since
+     * request_id is monotonically increasing, we use the max function to find the last value inserted. For 
+     * an empty table scenario, the null value returned by max is converted to 999999 so that we
+     * can start at a million.
+     * @throws SQLException
+     */
+    private void initNextRequestId() throws SQLException {
+         
+        String findLastQuery = "SELECT COALESCE(MAX(request_id),999999) AS last_value FROM tweetmood.requests";
+        
+        Statement findLastStmt = _conn.createStatement();
+        
+        ResultSet rs = findLastStmt.executeQuery(findLastQuery);
+        
+        if (rs.next()) {
+            long lastValue = rs.getLong("last_value");
+            _nextRequestId.set(lastValue+1);
+            LOG.info("nextRequestId="+_nextRequestId.get());
+        }
+    }
+
+    
 }

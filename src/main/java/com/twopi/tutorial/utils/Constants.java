@@ -30,8 +30,15 @@ public final class Constants {
     public final static String TWOAUTH_TOKEN_PARAM        = "twitteroauth.token.key";
     public final static String TWOAUTH_TOEKN_SECRET_PARAM = "twitteroauth.token.secret.key";
     
- // Other constants related to Twitter Helper
+    // Other constants related to Twitter Helper
     public final static String TWITTER_HELPER_ATTR        = "twitter.helper";
     public final static int    TWITTER_BATCH_MAX          = 1000;
+    
+    //TweetRequest statuses
+    public final static String TR_PENDING_STATUS          = "pending";
+    public final static String TR_COMPLETED_STATUS        = "completed";
+    public final static String TR_FAILED_STATUS           = "failed";
+    public final static String TR_PARTIAL_STATUS          = "partial";
+    
 
 }

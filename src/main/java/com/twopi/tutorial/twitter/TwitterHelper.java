@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import com.twitter.Extractor;
 import com.twopi.tutorial.db.Tweet;
 import com.twopi.tutorial.utils.Constants;
 
@@ -28,6 +29,8 @@ public class TwitterHelper {
     
     private Twitter _twitter = null;
     
+    private Extractor _extractor = null;
+    
     public TwitterHelper(String oauthKey, String oauthSecret, String oauthToken, String oauthTokenSecret) {
         
         ConfigurationBuilder cb = new ConfigurationBuilder()
@@ -37,9 +40,18 @@ public class TwitterHelper {
                                     .setOAuthAccessTokenSecret(oauthTokenSecret);
         
         _twitter = new TwitterFactory(cb.build()).getInstance();
+        
+        _extractor = new Extractor();
     }
     
+    /**
+     * Search for tweets for the given query string
+     * @param queryStr
+     * @return - List of found tweets.
+     */
     public List<Tweet> searchTweets(String queryStr) {
+        LOG.info("Searching tweets for query=\""+queryStr+"\"");
+        
         List<Tweet> tweets = new ArrayList<Tweet>();
         
         try {
@@ -63,13 +75,56 @@ public class TwitterHelper {
         
         return tweets;
     }
+    
+    /**
+     * Cleans the tweet's text so that it can be used for the sentiment analysis. We make use of twitter-text for Java
+     * library. All the hashtags, urls, user names, and cash tags are removed from the text. The method uses
+     * slightly less performant but highly convenient String.replaceAll method rather than using a StringBuilder in
+     * conjunction with a Pattern/Matcher
+     * @param text - Tweet's text
+     * @return Cleaned text
+     */
+    public String cleanTweetText(String text) {
+        List<String> hashTags = _extractor.extractHashtags(text);
+        List<String> urls = _extractor.extractURLs(text);
+        List<String> mentionedNames = _extractor.extractMentionedScreennames(text);
+        List<String> cashTags = _extractor.extractCashtags(text);
+        String replyName = _extractor.extractReplyScreenname(text);
+        
+        List<String> entities = new ArrayList<String>();
+        entities.addAll(hashTags);
+        entities.addAll(urls);
+        entities.addAll(mentionedNames);
+        entities.addAll(cashTags);
+        entities.add("#");
+        entities.add("@");
+        entities.add("\\$");
+        
+        if (replyName != null) {
+            entities.add(replyName);
+        }
+        
+        for (String entity : entities) {
+            text = text.replaceAll(entity, "");
+        }
+        
+        text = text.toString().trim().replaceAll("\\s+", " ");
 
+        return text;
+    }
+
+    /**
+     * Map twitter4j Status object to Tweet object
+     * @param tw - twitter4j Status object
+     * @return - Populated Tweet object
+     */
     private Tweet mapTweet(Status tw) {
         Tweet tweet = new Tweet();
         
         tweet.setTweetTwitterId(tw.getId());
         tweet.setDateCreated(tw.getCreatedAt());
         tweet.setText(tw.getText());
+        tweet.setCleanText(cleanTweetText(tw.getText()));
         tweet.setLanguage(tw.getLang());
         tweet.setFavorited(tw.isFavorited());
         tweet.setRetweeted(tw.isRetweeted());

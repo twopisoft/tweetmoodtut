@@ -5,14 +5,17 @@ import java.util.List;
 import com.twopi.tutorial.db.Tweet;
 
 /**
- * A special sub-class of TweetMoodResponse class to indicate that response is still pending
- * @author arshad01
+ * Class for representing an Error response. Also includes the failure reason
+ * @author twopi
  *
  */
-public final class TweetMoodPendingResponse extends TweetMoodResponse {
+public final class TweetMoodErrorResponse extends TweetMoodResponse {
+
+    private String _reason;
     
-    public TweetMoodPendingResponse(long reqId) {
+    public TweetMoodErrorResponse(long reqId, String reason) {
         super(reqId,null);
+        _reason = reason;
     }
     
     @Override
@@ -29,7 +32,11 @@ public final class TweetMoodPendingResponse extends TweetMoodResponse {
      * Extra method to add a "pending" field in the response.
      * @return
      */
-    public final boolean getPending() {
+    public final boolean getFailed() {
         return true;
+    }
+    
+    public final String getFailReason() {
+        return _reason;
     }
 }
