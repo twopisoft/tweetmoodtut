@@ -65,6 +65,11 @@ public class TweetMoodResource {
             boolean needProcessing = request.getParentId() == 0;
             
             if (parentReq != null && parentReq.getStatus().equals(Constants.TR_FAILED_STATUS)) {
+                // Since the parent request had failed, we have to restart it. Also, note
+                // that reqId changes accordingly to point to parent request. This ensures
+                // that parent request (hopefully) completes successfully and its status
+                // set to completed. For the original request, the status will get updated
+                // to completed once the getMoodPoll is called
                 reqId = parentReq.getRequestId();
                 needProcessing = true;
             }
