@@ -6,7 +6,7 @@ Code Repository : https://github.com/twopisoft/tweetmoodtut.git
 Setup Database:
 ---------------
 
-Once the Database is created, connect to it and run the script 'tweetmood_define_schem.sql' from inside vsql console.
+Once the Database is created, connect to it and run the script 'tweetmood_define_schema.sql' from inside vsql console.
 
 Building and Running:
 ---------------------
