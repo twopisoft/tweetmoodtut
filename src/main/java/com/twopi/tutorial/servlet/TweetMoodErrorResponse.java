@@ -1,8 +1,6 @@
 package com.twopi.tutorial.servlet;
 
-import java.util.List;
-
-import com.twopi.tutorial.db.Tweet;
+import com.twopi.tutorial.utils.Constants;
 
 /**
  * Class for representing an Error response. Also includes the failure reason
@@ -11,32 +9,21 @@ import com.twopi.tutorial.db.Tweet;
  */
 public final class TweetMoodErrorResponse extends TweetMoodResponse {
 
-    private String _reason;
+    private String _failReason;
     
-    public TweetMoodErrorResponse(long reqId, String reason) {
-        super(reqId,null);
-        _reason = reason;
-    }
-    
-    @Override
-    public final int getTweetCount() {
-        return 0;
-    }
-    
-    @Override
-    public final List<Tweet> getTweets() {
-        return null;
-    }
-
-    /**
-     * Extra method to add a "pending" field in the response.
-     * @return
-     */
-    public final boolean getFailed() {
-        return true;
+    public TweetMoodErrorResponse(long reqId, String failReason) {
+        super(reqId, Constants.TR_FAILED_STATUS);
+        _failReason = failReason;
     }
     
     public final String getFailReason() {
-        return _reason;
+        return _failReason;
+    }
+
+    /**
+     * @param failReason the failReason to set
+     */
+    public void setFailReason(String failReason) {
+        _failReason = failReason;
     }
 }

@@ -1,6 +1,5 @@
 package com.twopi.tutorial.idol;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +15,7 @@ import com.twopi.tutorial.db.Tweet;
 import com.twopi.tutorial.idol.response.error.IDOLErrorResponse;
 import com.twopi.tutorial.idol.response.sentiment.IDOLSentimentResponse;
 import com.twopi.tutorial.utils.AssertUtil;
+import com.twopi.tutorial.utils.Constants;
 import com.twopi.tutorial.utils.LanguageMapper;
 
 /**
@@ -27,9 +27,6 @@ import com.twopi.tutorial.utils.LanguageMapper;
 public class IDOLServiceHelper {
     
     private final static Logger LOG = Logger.getLogger(IDOLServiceHelper.class.getName());
-    
-    private final static String BASE_URL = "https://api.idolondemand.com/1/api";
-    private final static String SENTIMENT_ANALYSIS_URL = BASE_URL + "/sync/analyzesentiment/v1?";
     
     private String _apiKey = null;
     private Client _client = null;
@@ -49,18 +46,33 @@ public class IDOLServiceHelper {
         
         LOG.info("Starting sentiment analysis with IDOL API");
         
-        AssertUtil.assertField(tweets);
+        AssertUtil.assertFieldSvc(tweets);
+        
+        int numErrors = Constants.MAX_ERRORS;
         
         List<Tweet> analyzedTweets = new ArrayList<Tweet>();
         for (Tweet tweet : tweets) {
             try {
-                IDOLSentimentResponse response =
-                        invokeSentimentApi(URLEncoder.encode(tweet.getCleanText(), "UTF-8"),tweet.getLanguage());
-                tweet.setTweetMood(response.getAggregate().getSentiment().name().toLowerCase());
-                tweet.setMoodScore(response.getAggregate().getScore().doubleValue());
-                analyzedTweets.add(tweet);
-            } catch (UnsupportedEncodingException e) {
-                LOG.warning("Exception while encoding: "+e.toString());
+                String text = URLEncoder.encode(tweet.getCleanText(), "UTF-8");
+                
+                if (!text.isEmpty() && 
+                    text.length() > Constants.TWEET_MIN_LENGTH &&
+                    !tweet.isRetweeted()) {
+                    
+                    LOG.info("invokeSentimentApi: "+text);
+                    
+                    IDOLSentimentResponse response =
+                            invokeSentimentApi(text,tweet.getLanguage());
+                    tweet.setTweetMood(response.getAggregate().getSentiment().name().toLowerCase());
+                    tweet.setMoodScore(response.getAggregate().getScore().doubleValue());
+                    analyzedTweets.add(tweet);
+                }
+            } catch (Exception e) {
+                LOG.warning("Exception : "+e.toString());
+                numErrors--;
+                if (numErrors <= 0) {
+                    throw new RuntimeException("Too many errors. "+e.getMessage());
+                }
             }           
         }
         
@@ -77,9 +89,8 @@ public class IDOLServiceHelper {
      * is thrown.
      */
     private IDOLSentimentResponse invokeSentimentApi(String text, String language) {
-        LOG.info("invokeSentimentApi: text="+text);
         
-        Invocation.Builder builder = _client.target(SENTIMENT_ANALYSIS_URL)
+        Invocation.Builder builder = _client.target(Constants.IDOL_SENT_ANALYSIS_URL)
                             .queryParam("text", text)
                             .queryParam("language", LanguageMapper.map(language))
                             .queryParam("apikey", _apiKey)

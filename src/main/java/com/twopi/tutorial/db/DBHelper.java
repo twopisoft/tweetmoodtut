@@ -2,7 +2,9 @@ package com.twopi.tutorial.db;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import java.sql.Connection;
@@ -90,9 +92,11 @@ public class DBHelper {
     public void addTweets(long reqId, List<Tweet> tweets) throws SQLException {
         assertState();
         
-        LOG.info("Adding tweets for request_id="+reqId);
+        LOG.info("Adding tweets("+ tweets.size() +") for request_id="+reqId);
         
         for (Tweet tw : tweets) {
+            LOG.info("Adding tweet: "+tw.getText());
+            
             insertTweet(reqId, tw);
         }
         
@@ -110,7 +114,7 @@ public class DBHelper {
         
         TweetRequest tweetRequest = getTweetRequest(reqId);
         
-        AssertUtil.assertField(tweetRequest);
+        AssertUtil.assertFieldSvc(tweetRequest);
         
         return tweetRequest.getStatus().equals(Constants.TR_PENDING_STATUS);
     }
@@ -135,9 +139,52 @@ public class DBHelper {
             tweets.add(new Tweet().load(rs));
         }
         
+        Map<String,Map<String,String>> stats = new HashMap<String,Map<String,String>>();
+        
+        stats.put("total", findTotalStats(reqId));
+        stats.put("daily", findDailyStats(reqId));
+        
         LOG.info("Returning "+tweets.size()+" tweets");
         
-        return new TweetMoodResponse(reqId, tweets);
+        return new TweetMoodResponse(reqId, tweets, stats, Constants.TR_COMPLETED_STATUS);
+    }
+
+    private Map<String, String> findDailyStats(long reqId) throws SQLException {
+        String tweetMoodDailyCountQuery = String.format(
+               "SELECT DATE(tweet_date_created)as date, COUNT(tweet_mood) as count, tweet_mood FROM tweetmood.tweets "+
+               " WHERE tweet_request_id = %d GROUP BY date,tweet_mood ORDER BY date",reqId);
+        
+        Statement tweetMoodDailyCountStmt = _conn.createStatement();
+        ResultSet rs = tweetMoodDailyCountStmt.executeQuery(tweetMoodDailyCountQuery);
+        
+        Map<String,String> dailyStats = new HashMap<String,String>();
+        
+        while (rs.next()) {
+            dailyStats.put(rs.getString("date")+"_"+rs.getString("tweet_mood"), rs.getString(2));
+        }
+        
+        LOG.info("Daily Stats="+dailyStats);
+        
+        return dailyStats;
+    }
+
+    private Map<String, String> findTotalStats(long reqId) throws SQLException {
+        String tweetMoodCountQuery = String.format(
+                "SELECT tweet_mood, COUNT(tweet_mood) FROM tweetmood.tweets " +
+                "  WHERE tweet_request_id = %d GROUP BY tweet_mood", reqId);
+
+        Statement tweetMoodCountStmt = _conn.createStatement();
+        ResultSet rs = tweetMoodCountStmt.executeQuery(tweetMoodCountQuery);
+        
+        Map<String,String> totalStats = new HashMap<String,String>();
+
+        while (rs.next()) {
+            totalStats.put(rs.getString("tweet_mood"), rs.getString(2));
+        }
+        
+        LOG.info("Total Stats="+totalStats);
+        
+        return totalStats;
     }
 
     /**
@@ -269,13 +316,13 @@ public class DBHelper {
                                     "        '%b','%b','%s',%f)",
                                     reqId,
                                     tw.getTweetTwitterId(),
-                                    tw.getTopic(),
+                                    escapeSqlString(tw.getTopic()),
                                     tw.getDateCreated().toString(),
                                     tw.getLanguage(),
-                                    tw.getText().replaceAll("'", "''"),
-                                    tw.getCleanText().replaceAll("'", "''"),
+                                    escapeSqlString(tw.getText()),
+                                    escapeSqlString(tw.getCleanText()),
                                     tw.getUserId(),
-                                    tw.getUserName(),
+                                    escapeSqlString(tw.getUserName()),
                                     tw.isRetweeted(),
                                     tw.isFavorited(),
                                     tw.getTweetMood(),
@@ -313,6 +360,16 @@ public class DBHelper {
             throw new IllegalStateException("DB connection is not initialized");
         }
         return true;
+    }
+    
+    /**
+     * 
+     */
+    private String escapeSqlString(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        return str.replaceAll("'", "''");
     }
     
     /**

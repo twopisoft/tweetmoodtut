@@ -1,8 +1,6 @@
 package com.twopi.tutorial.servlet;
 
-import java.util.List;
-
-import com.twopi.tutorial.db.Tweet;
+import com.twopi.tutorial.utils.Constants;
 
 /**
  * A special sub-class of TweetMoodResponse class to indicate that response is still pending
@@ -12,24 +10,11 @@ import com.twopi.tutorial.db.Tweet;
 public final class TweetMoodPendingResponse extends TweetMoodResponse {
     
     public TweetMoodPendingResponse(long reqId) {
-        super(reqId,null);
+        super(reqId,Constants.TR_PENDING_STATUS);
     }
     
     @Override
     public final int getTweetCount() {
         return 0;
-    }
-    
-    @Override
-    public final List<Tweet> getTweets() {
-        return null;
-    }
-
-    /**
-     * Extra method to add a "pending" field in the response.
-     * @return
-     */
-    public final boolean getPending() {
-        return true;
     }
 }

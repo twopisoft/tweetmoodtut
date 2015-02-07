@@ -28,7 +28,7 @@
     </context-param>
     <context-param>
     	<param-name>db.url</param-name>
-        <param-value>jdbc:vertica://192.168.1.7:5433/TweetMoodDB</param-value>
+        <param-value>jdbc:vertica://192.168.1.6:5433/TweetMoodDB</param-value>
     </context-param>
     <context-param>
     	<param-name>db.user</param-name>

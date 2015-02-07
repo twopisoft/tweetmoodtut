@@ -127,7 +127,8 @@ public class TwitterHelper {
         tweet.setCleanText(cleanTweetText(tw.getText()));
         tweet.setLanguage(tw.getLang());
         tweet.setFavorited(tw.isFavorited());
-        tweet.setRetweeted(tw.isRetweeted());
+        //tweet.setRetweeted(tw.isRetweeted());
+        tweet.setRetweeted(tw.isRetweet());
         tweet.setUserId(tw.getUser().getId());
         tweet.setUserName(tw.getUser().getName());
         

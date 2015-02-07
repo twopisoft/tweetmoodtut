@@ -46,10 +46,10 @@ public class TweetMoodResource {
     public TweetRequest getMood(@QueryParam("search") String search) {
         LOG.info("getMood: search="+search);
         
-        AssertUtil.assertParam(search);
+        AssertUtil.assertParamSvc(search);
         
         DBHelper dbHelper = (DBHelper) context.getAttribute(Constants.DB_HELPER_ATTR);
-        AssertUtil.assertField(dbHelper);
+        AssertUtil.assertFieldSvc(dbHelper);
         
         TweetRequest request;
         try {
@@ -57,7 +57,7 @@ public class TweetMoodResource {
             
             request = dbHelper.addRequest(normalizedSearch);
             
-            AssertUtil.assertField(request);
+            AssertUtil.assertFieldSvc(request);
             
             TweetRequest parentReq = dbHelper.getTweetRequest(request.getParentId());
             
@@ -72,6 +72,9 @@ public class TweetMoodResource {
                 // to completed once the getMoodPoll is called
                 reqId = parentReq.getRequestId();
                 needProcessing = true;
+                
+                // Since we are restarting the request, set its state to pending
+                dbHelper.updateStatus(reqId, Constants.TR_PENDING_STATUS, "in progress...");
             }
             
             if (needProcessing) {
@@ -106,7 +109,7 @@ public class TweetMoodResource {
     public TweetMoodResponse getMoodPoll(@PathParam("reqid") String reqid) {
         LOG.info("reqId="+reqid);
         
-        AssertUtil.assertParam(reqid);
+        AssertUtil.assertParamSvc(reqid);
         
         long requestId = Long.parseLong(reqid);
         
@@ -121,7 +124,7 @@ public class TweetMoodResource {
     private TweetMoodResponse moodAnalysisResponse(long reqId) {
         
         DBHelper dbHelper = (DBHelper) context.getAttribute(Constants.DB_HELPER_ATTR);
-        AssertUtil.assertField(dbHelper);
+        AssertUtil.assertFieldSvc(dbHelper);
         
         TweetMoodResponse response;
         try {
@@ -141,7 +144,7 @@ public class TweetMoodResource {
                     // For ongoing request, return a Pending response
                     response = new TweetMoodPendingResponse(reqId);
                 } else if (parentRequest.getStatus().equals(Constants.TR_FAILED_STATUS)) {
-                    // For a failed request, retunr an Error response. Failed requests can always be restarted.
+                    // For a failed request, return an Error response. Failed requests can always be restarted.
                     response = new TweetMoodErrorResponse(reqId, parentRequest.getStatusMessage());
                     updateStatus(reqId, Constants.TR_FAILED_STATUS, parentRequest.getStatusMessage());
                 } else {
@@ -168,13 +171,13 @@ public class TweetMoodResource {
     private void processRequest(String normalizedSearch, long reqId) {
         
         TwitterHelper twitterHelper = (TwitterHelper) context.getAttribute(Constants.TWITTER_HELPER_ATTR);
-        AssertUtil.assertField(twitterHelper);
+        AssertUtil.assertFieldSvc(twitterHelper);
         
         IDOLServiceHelper idolHelper = (IDOLServiceHelper) context.getAttribute(Constants.IDOL_SVC_ATTR);
-        AssertUtil.assertField(idolHelper);
+        AssertUtil.assertFieldSvc(idolHelper);
         
         DBHelper dbHelper = (DBHelper) context.getAttribute(Constants.DB_HELPER_ATTR);
-        AssertUtil.assertField(dbHelper);
+        AssertUtil.assertFieldSvc(dbHelper);
         
         // Process Request Chain
         
@@ -227,7 +230,7 @@ public class TweetMoodResource {
         
         DBHelper dbHelper = (DBHelper) context.getAttribute(Constants.DB_HELPER_ATTR);
         
-        AssertUtil.assertField(dbHelper);
+        AssertUtil.assertFieldSvc(dbHelper);
         
         try {
             dbHelper.updateStatus(reqId, status, statusMessage);
