@@ -17,6 +17,8 @@ public final class Constants {
     // Other constants related to DB
     public final static String DB_CONNECTION_PARAM      = "db.connection";
     public final static String DB_HELPER_ATTR           = "db.helper";
+    public final static String DB_TOTAL_STATS           = "total";
+    public final static String DB_DAILY_STATS           = "daily";
 
     // Parameter names for IDOL API
     public final static String IDOLAPI_KEY_PARAM        = "idolapi.key";

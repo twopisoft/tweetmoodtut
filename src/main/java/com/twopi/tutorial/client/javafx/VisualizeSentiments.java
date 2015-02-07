@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.twopi.tutorial.servlet.TweetMoodResponse;
+import com.twopi.tutorial.utils.Constants;
 
 import javafx.application.Application;
 import javafx.collections.FXCollections;
@@ -20,6 +21,12 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.stage.Stage;
 
+/**
+ * Class for Visualizing Tweet Sentiment Analysis. It can display data in Pie Chart, Bar Chart, or Bubble Chart.
+ * 
+ * @author arshad01
+ *
+ */
 public class VisualizeSentiments extends Application {
 
     private String _query;
@@ -29,7 +36,8 @@ public class VisualizeSentiments extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         
-        _query = System.getProperty("query", "$hpq");
+        // Read properties from command line
+        _query = System.getProperty("query", "$hpq"); 
         _chartType = System.getProperty("chart","pie");
         _ignoreNeutral = Boolean.valueOf(System.getProperty("ignoreNeutral","false")).booleanValue();
         
@@ -61,6 +69,13 @@ public class VisualizeSentiments extends Application {
         stage.show();
     }
     
+    /**
+     * Displays BubbleChart. Note that for X-Axis Day numbers are used since Bubble Chart does not support
+     * Categories on X-Axis.
+     * @param title
+     * @param data
+     * @return
+     */
     @SuppressWarnings("unchecked")
     private BubbleChart<Number,Number> prepareBubbleChart(String title, TweetMoodResponse data) {
         NumberAxis xAxis = new NumberAxis();
@@ -68,7 +83,7 @@ public class VisualizeSentiments extends Application {
  
         BubbleChart<Number,Number> bubble = new BubbleChart<Number,Number>(xAxis, yAxis);
         
-        Map<String,String> dailyData = data.getStats().get("daily");
+        Map<String,String> dailyData = data.getStats().get(Constants.DB_DAILY_STATS);
         
         XYChart.Series<Number, Number> positiveSeries = new XYChart.Series<Number,Number>();
         XYChart.Series<Number, Number> negativeSeries = new XYChart.Series<Number,Number>();
@@ -117,6 +132,13 @@ public class VisualizeSentiments extends Application {
         
     }
 
+    /**
+     * Displays BarChart. Days are used on X Axis and bar height shows the count of respective sentiment on
+     * that day
+     * @param title
+     * @param data
+     * @return
+     */
     @SuppressWarnings("unchecked")
     private BarChart<String,Number> prepareBarChart(String title, TweetMoodResponse data) {
         CategoryAxis xAxis = new CategoryAxis();
@@ -124,7 +146,7 @@ public class VisualizeSentiments extends Application {
  
         BarChart<String,Number> bar = new BarChart<String,Number>(xAxis, yAxis);
         
-        Map<String,String> dailyData = data.getStats().get("daily");
+        Map<String,String> dailyData = data.getStats().get(Constants.DB_DAILY_STATS);
         
         XYChart.Series<String, Number> positiveSeries = new XYChart.Series<String,Number>();
         XYChart.Series<String, Number> negativeSeries = new XYChart.Series<String,Number>();
@@ -157,7 +179,6 @@ public class VisualizeSentiments extends Application {
                 }
             }
             
-            System.out.println("days="+days);
             daysCat.addAll(days);
             xAxis.setCategories(daysCat);
             
@@ -174,13 +195,18 @@ public class VisualizeSentiments extends Application {
         
     }
 
-    
+    /**
+     * Displays Pie Chart. Only uses total values for each sentiment
+     * @param title
+     * @param data
+     * @return
+     */
     private PieChart preparePieChart(String title, TweetMoodResponse data) {
         Map<String,Map<String,String>> allStats = data.getStats();
         
         ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
         
-        Map<String,String> stats = allStats.get("total");
+        Map<String,String> stats = allStats.get(Constants.DB_TOTAL_STATS);
         
         if (stats != null) {
             for (String k : stats.keySet()) {

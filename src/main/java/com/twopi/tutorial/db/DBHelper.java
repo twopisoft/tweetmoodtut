@@ -95,7 +95,6 @@ public class DBHelper {
         LOG.info("Adding tweets("+ tweets.size() +") for request_id="+reqId);
         
         for (Tweet tw : tweets) {
-            LOG.info("Adding tweet: "+tw.getText());
             
             insertTweet(reqId, tw);
         }
@@ -139,16 +138,24 @@ public class DBHelper {
             tweets.add(new Tweet().load(rs));
         }
         
+        // Add the statistics to the response
         Map<String,Map<String,String>> stats = new HashMap<String,Map<String,String>>();
         
-        stats.put("total", findTotalStats(reqId));
-        stats.put("daily", findDailyStats(reqId));
+        stats.put(Constants.DB_TOTAL_STATS, findTotalStats(reqId));
+        stats.put(Constants.DB_DAILY_STATS, findDailyStats(reqId));
         
         LOG.info("Returning "+tweets.size()+" tweets");
         
         return new TweetMoodResponse(reqId, tweets, stats, Constants.TR_COMPLETED_STATUS);
     }
 
+    /**
+     * Calculates Daily statistics for the tweets; i.e. for each day, determine the count of positive
+     * negative, and neutral tweets.
+     * @param reqId
+     * @return
+     * @throws SQLException
+     */
     private Map<String, String> findDailyStats(long reqId) throws SQLException {
         String tweetMoodDailyCountQuery = String.format(
                "SELECT DATE(tweet_date_created)as date, COUNT(tweet_mood) as count, tweet_mood FROM tweetmood.tweets "+
@@ -168,6 +175,13 @@ public class DBHelper {
         return dailyStats;
     }
 
+    /**
+     * Find the total statistics for the tweets; i.e. Total number of positive, negative, and
+     * neutral tweets.
+     * @param reqId
+     * @return
+     * @throws SQLException
+     */
     private Map<String, String> findTotalStats(long reqId) throws SQLException {
         String tweetMoodCountQuery = String.format(
                 "SELECT tweet_mood, COUNT(tweet_mood) FROM tweetmood.tweets " +
