@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
 /**
- * JAX-RS resource class for the sentiment analysis web serivice
+ * JAX-RS resource class for the sentiment analysis web service
  * @author arshad01
  *
  */

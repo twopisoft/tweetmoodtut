@@ -1,0 +1,34 @@
+Blog Post URL : https://arshad01.wordpress.com/2015/02/07/106/
+Video URL :
+
+Code Repository : https://github.com/twopisoft/tweetmoodtut.git
+
+Setup Database:
+---------------
+
+Once the Database is created, connect to it and run the script 'tweetmood_define_schem.sql' from inside vsql console.
+
+Building and Running:
+---------------------
+
+Server:
+-------
+
+From the top level project directory (containing the scripts directory)
+
+> scripts/runserver.sh
+
+
+Client:
+------
+
+From the top level project directory (containing the scripts directory)
+
+> scripts/runclient.sh    <--- runs client for query $HPQ and Pie Chart Visualization
+
+> scipts/runclient.sh -Dquery='$aapl' -Dchart=bar   <--- run client for query $AAPL and Bar Chart Visualization
+
+> scripts/runclient.sh -Dquery'#obamacare' -Dchart=bubble -DignoreNeutral=true <--- run client for query #obamacare 
+                                                                                    and Bubble Chart Visualization
+                                                                                    and do not plot netral
+                                                                                    sentiment

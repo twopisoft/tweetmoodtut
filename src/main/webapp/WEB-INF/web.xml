@@ -18,6 +18,11 @@
     	<listener-class>com.twopi.tutorial.servlet.ContextListener</listener-class>
     </listener>
     
+    <!--  Set encrypt.keys to 0 if you don't want to put encrypted keys. All
+          the parameters that end with .key can be stored in encrypted form
+          To decrypt, make sure you define SECRET_KEY environment variable
+          with a value of your encryption key. To encrypt data, use the
+          CipherUtil class under the com.twopi.tutorial.utils package -->
     <context-param>
     	<param-name>encrypt.keys</param-name>
         <param-value>1</param-value>
