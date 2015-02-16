@@ -19,6 +19,8 @@ import com.twopi.tutorial.twitter.TwitterHelper;
 import com.twopi.tutorial.utils.AssertUtil;
 import com.twopi.tutorial.utils.Constants;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
@@ -182,41 +184,53 @@ public class TweetMoodResource {
         // Process Request Chain
         
         // First obtain the tweets from Twitter
-        CompletableFuture.supplyAsync(() -> twitterHelper.searchTweets(normalizedSearch))
+        CompletableFuture<Void> acceptedCF =
+                CompletableFuture.supplyAsync(() -> twitterHelper.searchTweets(normalizedSearch))
         
-        // Handle any errors
-        .handle((tweets, exc) -> {
-            if (exc != null) {
-                updateStatus(reqId, Constants.TR_FAILED_STATUS, exc.getMessage());
-                exc.printStackTrace();
-            }
-            return tweets;
-        })
-        
-        // Then do sentiment analysis using IDOLOnDemand Sentiment Analysis API
-        .thenApply((tweets) -> idolHelper.doSentimentAnalysis(tweets))
-        
-        // Handle any errors
-        .handle((tweets, exc) -> {
-            if (exc != null) {
-                updateStatus(reqId, Constants.TR_FAILED_STATUS, exc.getMessage());
-                exc.printStackTrace();
-            }
-            return tweets;
-        })
-        
-        // Accept the analyzed data and store into the DB
-        .thenAccept((tweets) -> {
-            try {
-                dbHelper.addTweets(reqId, tweets);
-                updateStatus(reqId, Constants.TR_COMPLETED_STATUS, "ok");
-            } catch (Throwable th) {
-                updateStatus(reqId, Constants.TR_FAILED_STATUS, th.getMessage());
+                // Handle any errors
+                .handle((tweets, exc) -> {
+                    if (exc != null) {
+                        updateStatus(reqId, Constants.TR_FAILED_STATUS, exc.getMessage());
+                        exc.printStackTrace();
+                    }
+                    return tweets;
+                })
                 
-                th.printStackTrace();
-                throw new RuntimeException(th.toString());
-            } 
-        }); 
+                // Then do sentiment analysis using IDOLOnDemand Sentiment Analysis API
+                .thenApply((tweets) -> idolHelper.doSentimentAnalysis(tweets))
+                
+                // Handle any errors
+                .handle((tweets, exc) -> {
+                    if (exc != null) {
+                        updateStatus(reqId, Constants.TR_FAILED_STATUS, exc.getMessage());
+                        exc.printStackTrace();
+                    }
+                    return tweets;
+                })
+                
+                // Accept the analyzed data and store into the DB
+                .thenAccept((tweets) -> {
+                    try {
+                        dbHelper.addTweets(reqId, tweets);
+                        updateStatus(reqId, Constants.TR_COMPLETED_STATUS, "ok");
+                    } catch (Throwable th) {
+                        th.printStackTrace();
+                        updateStatus(reqId, Constants.TR_FAILED_STATUS, th.getMessage());
+                        
+                        throw new RuntimeException(th.toString());
+                    } 
+                }); 
+        
+        acceptedCF.exceptionally(ex -> {
+            ex.printStackTrace();
+            throw new RuntimeException(ex); 
+        });
+        
+        try {
+            acceptedCF.get();
+        } catch (Throwable th) {
+            th.printStackTrace();
+        }
     }
     
     /**
@@ -249,6 +263,12 @@ public class TweetMoodResource {
      * @return normalized query string
      */
     private String normalize(String query) {
-        return query.trim().replaceAll("\\s+", " ").toLowerCase();
+        try {
+            return URLDecoder.decode(query.trim().replaceAll("\\s+", " ").toLowerCase(), "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return query;
     }
 }

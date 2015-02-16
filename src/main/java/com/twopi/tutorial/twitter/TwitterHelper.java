@@ -85,14 +85,14 @@ public class TwitterHelper {
      * @return Cleaned text
      */
     public String cleanTweetText(String text) {
-        List<String> hashTags = _extractor.extractHashtags(text);
+        //List<String> hashTags = _extractor.extractHashtags(text);
         List<String> urls = _extractor.extractURLs(text);
         List<String> mentionedNames = _extractor.extractMentionedScreennames(text);
         List<String> cashTags = _extractor.extractCashtags(text);
         String replyName = _extractor.extractReplyScreenname(text);
         
         List<String> entities = new ArrayList<String>();
-        entities.addAll(hashTags);
+        //entities.addAll(hashTags);
         entities.addAll(urls);
         entities.addAll(mentionedNames);
         entities.addAll(cashTags);

@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -21,9 +22,6 @@ import com.twopi.tutorial.utils.Constants;
 /**
  * Class providing methods to interact with the database. 
  * 
- * Note: that all query strings are stored in this class rather
- * than the Constants or any other class so as to keep them close to their usage.
- * 
  * @author arshad01
  *
  */
@@ -35,6 +33,8 @@ public class DBHelper {
     
     // AtomicLong to generate requests ids.
     private static AtomicLong _nextRequestId = new AtomicLong();
+    
+    private Map<String,PreparedStatement> preparedStmtsMap = new HashMap<String,PreparedStatement>();
     
     /**
      * Opens a connection to the Database. If the connection exists, then
@@ -126,12 +126,11 @@ public class DBHelper {
      */
     public TweetMoodResponse getTweets(long reqId) throws SQLException {
         assertState();
+
+        PreparedStatement ps = getPreparedStatement(QueryStrings.FIND_TWEETS);
+        ps = QueryBinder.bindArgs(ps, reqId);
         
-        String tweetQuery = "SELECT * FROM tweetmood.tweets WHERE tweet_request_id = " + reqId;
-        
-        Statement tweetStmt = _conn.createStatement();
-        
-        ResultSet rs = tweetStmt.executeQuery(tweetQuery);
+        ResultSet rs = ps.executeQuery();
         
         List<Tweet> tweets = new ArrayList<Tweet>();
         while (rs.next()) {
@@ -157,12 +156,11 @@ public class DBHelper {
      * @throws SQLException
      */
     private Map<String, String> findDailyStats(long reqId) throws SQLException {
-        String tweetMoodDailyCountQuery = String.format(
-               "SELECT DATE(tweet_date_created)as date, COUNT(tweet_mood) as count, tweet_mood FROM tweetmood.tweets "+
-               " WHERE tweet_request_id = %d GROUP BY date,tweet_mood ORDER BY date",reqId);
         
-        Statement tweetMoodDailyCountStmt = _conn.createStatement();
-        ResultSet rs = tweetMoodDailyCountStmt.executeQuery(tweetMoodDailyCountQuery);
+        PreparedStatement ps = getPreparedStatement(QueryStrings.FIND_DAILY_STATS);
+        ps = QueryBinder.bindArgs(ps, reqId);
+        
+        ResultSet rs = ps.executeQuery();
         
         Map<String,String> dailyStats = new HashMap<String,String>();
         
@@ -183,12 +181,10 @@ public class DBHelper {
      * @throws SQLException
      */
     private Map<String, String> findTotalStats(long reqId) throws SQLException {
-        String tweetMoodCountQuery = String.format(
-                "SELECT tweet_mood, COUNT(tweet_mood) FROM tweetmood.tweets " +
-                "  WHERE tweet_request_id = %d GROUP BY tweet_mood", reqId);
-
-        Statement tweetMoodCountStmt = _conn.createStatement();
-        ResultSet rs = tweetMoodCountStmt.executeQuery(tweetMoodCountQuery);
+        PreparedStatement ps = getPreparedStatement(QueryStrings.FIND_TOTAL_STATS);
+        ps = QueryBinder.bindArgs(ps, reqId);
+        
+        ResultSet rs = ps.executeQuery();
         
         Map<String,String> totalStats = new HashMap<String,String>();
 
@@ -230,29 +226,12 @@ public class DBHelper {
         String creationTimeStr = creationTime.toString();
         long newReqId = _nextRequestId.getAndIncrement();
         
-        String insertReqQuery = String.format(
-                                    "INSERT INTO tweetmood.requests (request_id, request_created_at,request_query,request_parent_id,request_status,request_status_message) "+
-                                            "SELECT %d, '%s'::timestamp, request_query, request_id, 'pending', 'in progress...' FROM tweetmood.requests " +
-                                            "WHERE request_query = '%s' AND request_parent_id = 0 "+
-                                            "UNION "+
-                                            "SELECT * FROM (SELECT %d, '%s'::timestamp, '%s', 0, 'pending', 'in progress...') AS tmp "+
-                                            "WHERE NOT EXISTS "+
-                                            " (SELECT '%s'::timestamp, request_query, request_id, 'pending', 'in progress...' FROM tweetmood.requests "+
-                                            "  WHERE request_query = '%s' AND request_parent_id = 0)",
-                                    newReqId,
-                                    creationTimeStr,
-                                    queryStr,
-                                    newReqId,
-                                    creationTimeStr,
-                                    queryStr,
-                                    creationTimeStr,
-                                    queryStr);
+        PreparedStatement ps = getPreparedStatement(QueryStrings.INSERT_REQUEST);
+        ps = QueryBinder.bindArgs(ps, newReqId,creationTimeStr,escapeSqlString(queryStr),
+                                      newReqId,creationTimeStr,escapeSqlString(queryStr),
+                                      creationTimeStr,escapeSqlString(queryStr));
         
-        LOG.info("query="+insertReqQuery);
-        
-        Statement insertReqStmt = _conn.createStatement();
-        
-        if (insertReqStmt.executeUpdate(insertReqQuery) > 0) {
+        if (ps.executeUpdate() > 0) {
             return getTweetRequest(newReqId);
         }
         
@@ -268,14 +247,17 @@ public class DBHelper {
     public TweetRequest getTweetRequest(long reqId) throws SQLException {
         assertState();
         
-        String findQuery = String.format("SELECT * FROM tweetmood.requests WHERE request_id = %d",reqId);
+        PreparedStatement ps = getPreparedStatement(QueryStrings.FIND_REQUEST);
+        ps = QueryBinder.bindArgs(ps, reqId);
         
-        Statement findStmt = _conn.createStatement();
-        ResultSet rs = findStmt.executeQuery(findQuery);
+        ResultSet rs = ps.executeQuery();
         if (rs.next()) {
+            LOG.info("Returing request for id: "+reqId);
             return new TweetRequest().load(rs);
         }
-                        
+        
+        LOG.warning("Could not find request for id: "+reqId);
+        
         return null;
     }
     
@@ -289,28 +271,22 @@ public class DBHelper {
     public void updateStatus(long reqId, String status, String statusMessage) throws SQLException {
         assertState();
         
+        LOG.info("Updating status to \""+status+"\" status_message="+statusMessage+" for reqId="+reqId);
+        
         boolean isCompleted = status.equals(Constants.TR_COMPLETED_STATUS);
-        
-        String updateStatQueryFmt = "UPDATE tweetmood.requests " +
-                                    "  SET request_status = '%s', request_status_message = '%s', " +
-                                       "request_last_completion = " + (isCompleted ? "'%s'::timestamp" : "%s") +
-                                    "  WHERE request_id = %d";
-        
         Timestamp completionTime = new Timestamp(new Date().getTime());
         
-        String updateStateQuery = String.format(updateStatQueryFmt, 
-                                                status, 
-                                                statusMessage.substring(0, Math.min(statusMessage.length(),100)),
-                                                (isCompleted ? completionTime.toString() : "NULL"),
-                                                reqId);
+        PreparedStatement ps = getPreparedStatement(QueryStrings.UPDATE_STATUS);
+        ps = QueryBinder.bindArgs(ps, status, 
+                                      statusMessage.substring(0, Math.min(statusMessage.length(),100)),
+                                      (isCompleted ? completionTime : null),
+                                      reqId);
         
-        LOG.info("updateStateQuery="+updateStateQuery);
-        
-        Statement updateStatStmt = _conn.createStatement();
-        
-        updateStatStmt.executeUpdate(updateStateQuery);
-        
-        LOG.info("Setting \""+status+"\" status for request_id: "+reqId);
+        if (ps.executeUpdate() > 0) {
+            LOG.info("Setting \""+status+"\" status for request_id: "+reqId);
+        } else {
+            LOG.warning("Failed to set status \""+status+"\" for request_id: "+reqId);
+        }
     }
     
     /**
@@ -321,30 +297,22 @@ public class DBHelper {
      */
     private void insertTweet(long reqId, Tweet tw) throws SQLException {
         
-        String insertTwQuery = String.format(
-                                    "INSERT INTO tweetmood.tweets " +
-                                    "  (tweet_request_id, tweet_twitter_id, tweet_topic, tweet_date_created,"+
-                                    "   tweet_language,tweet_text,tweet_clean_text,tweet_user_id,tweet_user_name," +
-                                    "   tweet_retweeted,tweet_favorited,tweet_mood,tweet_mood_score) " +
-                                    " VALUES (%d, %d, '%s', '%s'::timestamp, '%s', '%s', '%s', %d, '%s', " +
-                                    "        '%b','%b','%s',%f)",
-                                    reqId,
-                                    tw.getTweetTwitterId(),
-                                    escapeSqlString(tw.getTopic()),
-                                    tw.getDateCreated().toString(),
-                                    tw.getLanguage(),
-                                    escapeSqlString(tw.getText()),
-                                    escapeSqlString(tw.getCleanText()),
-                                    tw.getUserId(),
-                                    escapeSqlString(tw.getUserName()),
-                                    tw.isRetweeted(),
-                                    tw.isFavorited(),
-                                    tw.getTweetMood(),
-                                    tw.getMoodScore());
+        PreparedStatement ps = getPreparedStatement(QueryStrings.INSERT_TWEET);
+        ps = QueryBinder.bindArgs(ps, reqId,
+                                      tw.getTweetTwitterId(),
+                                      escapeSqlString(tw.getTopic()),
+                                      new Timestamp(tw.getDateCreated().getTime()),
+                                      tw.getLanguage(),
+                                      escapeSqlString(tw.getText()),
+                                      escapeSqlString(tw.getCleanText()),
+                                      tw.getUserId(),
+                                      escapeSqlString(tw.getUserName()),
+                                      tw.isRetweeted(),
+                                      tw.isFavorited(),
+                                      tw.getTweetMood(),
+                                      tw.getMoodScore());
         
-        Statement insertTwStmt = _conn.createStatement();
-        
-        insertTwStmt.executeUpdate(insertTwQuery);
+        ps.executeUpdate();
     }
 
     /**
@@ -366,6 +334,21 @@ public class DBHelper {
     }
     
     /**
+     * Create or returns a cached prepared statement.
+     * @param query - Query string for the prepared statement. Also used as a key to lookup cached prepared statement.
+     * @return - Prepared statement.
+     * @throws SQLException
+     */
+    private PreparedStatement getPreparedStatement(String query) throws SQLException {
+        PreparedStatement ps = preparedStmtsMap.get(query);
+        if (ps == null) {
+            ps = _conn.prepareStatement(query);
+            preparedStmtsMap.put(query, ps);
+        }
+        return ps;
+    }
+    
+    /**
      * Check the state of DB connection. For now only checks if connection was initialized.
      * @return true if connection status is ok otherwise throw IllegalStateException.
      */
@@ -377,7 +360,9 @@ public class DBHelper {
     }
     
     /**
-     * 
+     * Escapes quotes in a SQL string
+     * @param str
+     * @return
      */
     private String escapeSqlString(String str) {
         if (str == null || str.isEmpty()) {

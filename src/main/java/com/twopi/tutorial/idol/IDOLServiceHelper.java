@@ -5,14 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 import com.twopi.tutorial.db.Tweet;
-import com.twopi.tutorial.idol.response.error.IDOLErrorResponse;
 import com.twopi.tutorial.idol.response.sentiment.IDOLSentimentResponse;
 import com.twopi.tutorial.utils.AssertUtil;
 import com.twopi.tutorial.utils.Constants;
@@ -97,17 +96,12 @@ public class IDOLServiceHelper {
                             .request(MediaType.TEXT_PLAIN_TYPE)
                             .accept(MediaType.APPLICATION_JSON);
         
-        Response response = builder.get();
-        
-        if (response.getStatus() != 200) {
-            IDOLErrorResponse errorResponse = builder.get(IDOLErrorResponse.class);
-            String errMsg = String.format("Error while executing sentiment analysis api: code=%d, reason=%s, message=%s",
-                                    errorResponse.getError(),errorResponse.getReason(),errorResponse.getMessage());
+        try {
+            return builder.get(IDOLSentimentResponse.class);
+        } catch (WebApplicationException wex) {
+            String errMsg = "Exception while processing request: "+wex.getMessage();
             LOG.severe(errMsg);
             throw new RuntimeException(errMsg);
         }
-        
-        return builder.get(IDOLSentimentResponse.class);
-        
     }
 }
